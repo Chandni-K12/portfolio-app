@@ -1,0 +1,70 @@
+services:
+  # ==========================================
+  # Service 1: MongoDB Database
+  # ==========================================
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=taskdb
+    volumes:
+      # Named volume for persistent database storage across restarts
+      - mongo-data:/data/db
+    networks:
+      - app-network
+
+  # ==========================================
+  # Service 2: Node.js / Express Backend
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongodb:27017/taskdb
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  # ==========================================
+  # Service 3: React Frontend (Vite)
+  # ==========================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BACKEND_URL=http://backend:5000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+# ==========================================
+# Network: Custom bridge network
+# Enables DNS service discovery (e.g., http://backend:5000, mongodb://mongodb:27017)
+# ==========================================
+networks:
+  app-network:
+    driver: bridge
+
+# ==========================================
+# Volumes: Named volume for MongoDB persistence
+# ==========================================
+volumes:
+  mongo-data:
+    driver: local

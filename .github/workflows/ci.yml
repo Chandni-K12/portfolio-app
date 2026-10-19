@@ -1,0 +1,64 @@
+name: CI Pipeline
+
+on:
+  # Triggers on direct pushes to main or master
+  push:
+    branches: [main, master]
+  # Triggers on Pull Requests targeting main or master
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ==============================================================
+  # Supplementary Job 1: Linting
+  # Runs ESLint on the frontend codebase before tests execute
+  # ==============================================================
+  lint:
+    name: Code Linting (ESLint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Root Dependencies
+        run: npm ci || npm install
+
+      - name: Run ESLint
+        run: npm run lint
+
+  # ==============================================================
+  # Core Job: Build and Test
+  # Depends on the lint job passing first
+  # ==============================================================
+  build-and-test:
+    name: Build & Automated Tests
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Root Dependencies
+        run: npm ci || npm install
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci || npm install
+
+      - name: Run Automated Tests
+        run: npm test
+
+      - name: Build Frontend Production Dist
+        run: npm run build
